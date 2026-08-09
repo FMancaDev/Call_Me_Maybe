@@ -1,45 +1,50 @@
-.PHONY: install test clean run help
+PYTHON = python3
+UV = uv
 
-VENV_DIR = venv
-PYTHON = $(VENV_DIR)/bin/python
-PIP = $(VENV_DIR)/bin/pip
-ACTIVATE = source $(VENV_DIR)/bin/activate
+UV_CACHE_DIR = $(PWD)/.uv-cache
+HF_HOME = $(PWD)/.hf-cache
+TRANSFORMERS_CACHE = $(HF_HOME)/transformers
 
-# Dependencias
-REQUIREMENTS = torch transformers numpy
+ENV = UV_CACHE_DIR=$(UV_CACHE_DIR) \
+	HF_HOME=$(HF_HOME) \
+	TRANSFORMERS_CACHE=$(TRANSFORMERS_CACHE)
 
-help:
-	@echo "Comandos disponiveis:"
-	@echo "  make install   - Cria virtual environment e instala dependencias"
-	@echo "  make test      - Executa testes"
-	@echo "  make run       - Executa o projeto principal"
-	@echo "  make clean     - Remove virtual environment"
-	@echo "  make help      - Mostra esta mensagem"
+.PHONY: install run test test-sdk test-token lint clean fclean re
 
 install:
-	@echo "Criando virtual environment..."
-	python3 -m venv $(VENV_DIR)
-	@echo "Instalando dependencias..."
-	$(PIP) install --upgrade pip
-	$(PIP) install $(REQUIREMENTS)
-	@echo "Instalacao completa!"
-	@echo "Para ativar o ambiente: source $(VENV_DIR)/bin/activate"
-
-test:
-	@echo "Executando testes..."
-	$(PYTHON) test_sdk.py
-	$(PYTHON) investigate_vocab.py
-	$(PYTHON) test_token_generation.py
+	mkdir -p $(UV_CACHE_DIR)
+	mkdir -p $(HF_HOME)
+	$(ENV) $(UV) sync
 
 run:
-	@echo "Executando projeto principal..."
-	$(PYTHON) src/main.py
+	$(ENV) $(UV) run $(PYTHON) -m src
+
+test:
+	$(ENV) $(UV) run $(PYTHON) -m pytest tests
+
+test-sdk:
+	$(ENV) $(UV) run $(PYTHON) -m tests.test_sdk
+
+test-token:
+	$(ENV) $(UV) run $(PYTHON) -m tests.test_token_generation
+
+lint:
+	$(ENV) $(UV) run flake8 src tests
+	$(ENV) $(UV) run mypy src tests \
+		--warn-return-any \
+		--warn-unused-ignores \
+		--ignore-missing-imports \
+		--disallow-untyped-defs \
+		--check-untyped-defs
 
 clean:
-	@echo "Removendo virtual environment..."
-	rm -rf $(VENV_DIR)
-	@echo "Limpeza completa!"
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	rm -rf .mypy_cache
+	rm -rf .pytest_cache
 
-dev:
-	@echo "Ativando ambiente de desenvolvimento..."
-	$(ACTIVATE)
+fclean: clean
+	rm -rf .venv
+	rm -rf .uv-cache
+	rm -rf .hf-cache
+
+re: fclean install
