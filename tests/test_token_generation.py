@@ -1,37 +1,50 @@
 import time
 from llm_sdk.llm_sdk import Small_LLM_Model
+from src.decoder import choose_allowed_token, greedy_generate
+
+
+def test_choose_allowed_token() -> None:
+    """Test selection of the best token among allowed tokens"""
+
+    logits = [1.0, 9.0, 5.0, 7.0]
+    allowed_token_ids = {0, 2, 3}
+
+    result = choose_allowed_token(
+        logits,
+        allowed_token_ids,
+    )
+
+    assert result == 3
 
 
 def main() -> None:
-    """Generate one token manually from the model logits"""
+    """Test greedy token generation with the real LLM"""
 
-    print("Loading Model...")
+    print("Testing constrained token selection...")
+
+    test_choose_allowed_token()
+
+    print("Constrained token selection OK")
+    print("Loading model...")
 
     model = Small_LLM_Model(device="cpu")
-    print("Model Loaded")
 
+    print("Model loaded.")
     prompt = "The capital of France is"
-    encoded = model.encode(prompt)
 
-    # encode returns a tensor with shape [1, sequence_lenght]
-    inputs_id = encoded[0].tolist()
+    start = time.perf_counter()
 
-    print(f"Prompt: {prompt}")
-    print(f"Input IDs: {inputs_id}")
-
-    # get the logits for every possible next token
-    logits = model.get_logits_from_input_ids(inputs_id)
-    print(f"Vocabulary size: {len(logits)}")
-
-    # greedy decoding: choode the toke with the largest logit
-    next_token_id = max(
-        range(len(logits)),
-        key=logits.__getitem__,
+    result = greedy_generate(
+        model=model,
+        prompt=prompt,
+        max_tokens=10,
     )
 
-    next_token = model.decode([next_token_id])
-    print(f"Next token ID: {next_token_id}")
-    print(f"Next token: {next_token!r}")
+    elapsed = time.perf_counter() - start
+
+    print(f"Prompt: {prompt}")
+    print(f"Generated: {result!r}")
+    print(f"Generation time: {elapsed:.2f}s")
 
 
 if __name__ == "__main__":

@@ -28,6 +28,12 @@ test-sdk:
 test-token:
 	$(ENV) $(UV) run $(PYTHON) -m tests.test_token_generation
 
+test-prompt:
+	$(ENV) $(UV) run $(PYTHON) -m tests.test_prompt
+
+test-selection:
+	$(ENV) $(UV) run $(PYTHON) -m tests.test_function_selection
+
 lint:
 	$(ENV) $(UV) run flake8 src tests
 	$(ENV) $(UV) run mypy src tests \
