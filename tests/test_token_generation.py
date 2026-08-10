@@ -1,83 +1,38 @@
-import sys
-sys.path.append("/home/fodemanca/Documentos/Call_Me_Maybe/llm_sdk")
+import time
+from llm_sdk.llm_sdk import Small_LLM_Model
 
-from llm_sdk import Small_LLM_Model
 
-model = Small_LLM_Model()
+def main() -> None:
+    """Generate one token manually from the model logits"""
 
-print("=" * 60)
-print("GERAÇÃO TOKEN-A-TOKEN MANUAL")
-print("=" * 60)
+    print("Loading Model...")
 
-print("\nComo funciona a geração token-a-token:")
-print("1. Começamos com um prompt (texto inicial)")
-print("2. Tokenizamos o prompt")
-print("3. Num loop:")
-print("   - Passamos os tokens atuais ao modelo")
-print("   - Obtemos os logits para o próximo token")
-print("   - Escolhemos o token com maior logit (greedy decoding)")
-print("   - Adicionamos esse token à sequência")
-print("   - Repetimos até atingirmos um token de paragem ou limite")
+    model = Small_LLM_Model(device="cpu")
+    print("Model Loaded")
 
-print("\n" + "=" * 60)
-print("EXEMPLO PRÁTICO")
-print("=" * 60)
+    prompt = "The capital of France is"
+    encoded = model.encode(prompt)
 
-# Prompt inicial
-prompt = "The capital of France is"
-print(f"\nPrompt inicial: '{prompt}'")
+    # encode returns a tensor with shape [1, sequence_lenght]
+    inputs_id = encoded[0].tolist()
 
-# Tokenizar o prompt
-encoded = model.encode(prompt)
-input_ids = encoded[0].tolist()
-print(f"Tokens iniciais: {input_ids}")
+    print(f"Prompt: {prompt}")
+    print(f"Input IDs: {inputs_id}")
 
-# Gerar token por token
-max_tokens = 10
-generated_tokens = []
-generated_text = ""
+    # get the logits for every possible next token
+    logits = model.get_logits_from_input_ids(inputs_id)
+    print(f"Vocabulary size: {len(logits)}")
 
-print(f"\nGerando {max_tokens} tokens token-a-token:")
-print("-" * 60)
+    # greedy decoding: choode the toke with the largest logit
+    next_token_id = max(
+        range(len(logits)),
+        key=logits.__getitem__,
+    )
 
-for step in range(max_tokens):
-    # Obter logits para o próximo token
-    logits = model.get_logits_from_input_ids(input_ids)
+    next_token = model.decode([next_token_id])
+    print(f"Next token ID: {next_token_id}")
+    print(f"Next token: {next_token!r}")
 
-    # Escolher o token com maior logit (greedy decoding)
-    next_token_id = logits.index(max(logits))
 
-    # Adicionar à sequência
-    input_ids.append(next_token_id)
-    generated_tokens.append(next_token_id)
-
-    # Decodificar o token para ver o texto
-    token_text = model.decode([next_token_id])
-    generated_text += token_text
-
-    print(f"Passo {step + 1}: Token ID={next_token_id}, Texto='{token_text}', Logit={logits[next_token_id]:.4f}")
-
-print("-" * 60)
-print(f"\nTexto gerado: '{generated_text}'")
-print(f"Tokens gerados: {generated_tokens}")
-
-print("\n" + "=" * 60)
-print("COMPARAÇÃO: GERAÇÃO AUTOMÁTICA VS MANUAL")
-print("=" * 60)
-
-# Geração automática (se o modelo tiver um método generate)
-print("\nNota: O SDK não tem um método generate() automático,")
-print("por isso a geração manual é a única forma de gerar texto.")
-
-print("\n" + "=" * 60)
-print("CONCLUSÃO")
-print("=" * 60)
-print("\nA geração token-a-token manual permite-nos:")
-print("- Controlar exatamente qual token é escolhido em cada passo")
-print("- Implementar constrained decoding (filtrar tokens válidos)")
-print("- Implementar diferentes estratégias de sampling (temperature, top-k, etc.)")
-print("- Parar a geração em condições específicas")
-print("\nPara o constrained decoding, vamos:")
-print("- Em cada passo, filtrar quais tokens são válidos")
-print("- Escolher apenas entre os tokens válidos")
-print("- Garantir que o JSON gerado é sempre válido")
+if __name__ == "__main__":
+    main()
