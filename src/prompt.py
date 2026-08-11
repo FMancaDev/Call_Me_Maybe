@@ -60,3 +60,62 @@ def build_function_selection_prompt(user_prompt: str, functions: list[FunctionDe
     )
 
     return prompt
+
+
+def build_parameter_prompt(user_prompt: str, function: FunctionDefinition) -> str:
+    """Build a prompt for parameter extraction"""
+
+    parameter_data = {}
+
+    for name, parameter in function.parameters.items():
+        parameter_data[name] = parameter.model_dump()
+
+        parameters_json = json.dumps(
+            parameter_data,
+            ensure_ascii=False,
+            indent=2
+        )
+
+    prompt = (
+        "Extract the parameters required by the function.\n"
+        "Use only information from the user request.\n"
+        "Return only the parameter values as JSON.\n\n"
+        f"Function: {function.name}\n"
+        f"Description: {function.description}\n"
+        f"Parameters:\n{parameters_json}\n\n"
+        "User request:\n"
+        f"{user_prompt}\n\n"
+        "Parameters JSON:"
+    )
+    return prompt
+
+
+def build_parameter_value_prompt(user_prompt: str, function: FunctionDefinition, parameter_name: str) -> str:
+    """Build a prompt for extracting one parameter value
+
+        user_prompt: Original user request.
+        function: Selected function.
+        parameter_name: Parameter to extract.
+    """
+
+    parameter = function.parameters.get(parameter_name)
+
+    if parameter is None:
+        raise ValueError(
+            f"Unknown parameter: {parameter_name}"
+        )
+
+    prompt = (
+        "Extract exactly one value from the user request.\n"
+        "Do not calculate or execute the function.\n"
+        "Return only the value, with no explanation.\n\n"
+        f"Function: {function.name}\n"
+        f"Description: {function.description}\n"
+        f"Parameter: {parameter_name}\n"
+        f"Parameter type: {parameter.type}\n\n"
+        "User request:\n"
+        f"{user_prompt}\n\n"
+        f"Value for {parameter_name}:"
+    )
+
+    return prompt

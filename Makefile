@@ -9,7 +9,10 @@ ENV = UV_CACHE_DIR=$(UV_CACHE_DIR) \
 	HF_HOME=$(HF_HOME) \
 	TRANSFORMERS_CACHE=$(TRANSFORMERS_CACHE)
 
-.PHONY: install run test test-sdk test-token lint clean fclean re
+.PHONY: install run debug \
+	test test-sdk test-token test-prompt \
+	test-selection test-vocabulary test-parameters \
+	lint lint-strict clean fclean re
 
 install:
 	mkdir -p $(UV_CACHE_DIR)
@@ -18,6 +21,9 @@ install:
 
 run:
 	$(ENV) $(UV) run $(PYTHON) -m src
+
+debug:
+	$(ENV) $(UV) run $(PYTHON) -m pdb -m src
 
 test:
 	$(ENV) $(UV) run $(PYTHON) -m pytest tests
@@ -34,19 +40,31 @@ test-prompt:
 test-selection:
 	$(ENV) $(UV) run $(PYTHON) -m tests.test_function_selection
 
+test-vocabulary:
+	$(ENV) $(UV) run $(PYTHON) -m tests.test_vocabulary
+
+test-parameters:
+	$(ENV) $(UV) run $(PYTHON) -m tests.test_parameter_generation
+
 lint:
-	$(ENV) $(UV) run flake8 src tests
-	$(ENV) $(UV) run mypy src tests \
+	$(ENV) $(UV) run flake8 .
+	$(ENV) $(UV) run mypy . \
 		--warn-return-any \
 		--warn-unused-ignores \
 		--ignore-missing-imports \
 		--disallow-untyped-defs \
 		--check-untyped-defs
 
+lint-strict:
+	$(ENV) $(UV) run flake8 .
+	$(ENV) $(UV) run mypy . --strict
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	rm -rf .mypy_cache
 	rm -rf .pytest_cache
+	rm -rf .coverage
+	rm -rf htmlcov
 
 fclean: clean
 	rm -rf .venv
