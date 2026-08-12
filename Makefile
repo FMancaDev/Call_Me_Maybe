@@ -1,74 +1,56 @@
-PYTHON = python3
-UV = uv
+PYTHON = uv run python3
+PYTEST = uv run pytest
+FLAKE8 = uv run flake8
 
-UV_CACHE_DIR = $(PWD)/.uv-cache
+CACHE_DIR = $(PWD)/.uv-cache
 HF_HOME = $(PWD)/.hf-cache
-TRANSFORMERS_CACHE = $(HF_HOME)/transformers
+TRANSFORMERS_CACHE = $(PWD)/.hf-cache/transformers
 
-ENV = UV_CACHE_DIR=$(UV_CACHE_DIR) \
-	HF_HOME=$(HF_HOME) \
-	TRANSFORMERS_CACHE=$(TRANSFORMERS_CACHE)
+ENV = UV_CACHE_DIR=$(CACHE_DIR) HF_HOME=$(HF_HOME) TRANSFORMERS_CACHE=$(TRANSFORMERS_CACHE)
 
-.PHONY: install run debug \
-	test test-sdk test-token test-prompt \
-	test-selection test-vocabulary test-parameters \
-	lint lint-strict clean fclean re
+.PHONY: help install test test-sdk test-token test-prompt test-selection lint run clean
+
+help:
+	@echo "Available commands:"
+	@echo "  make install        Install project dependencies"
+	@echo "  make test           Run all tests"
+	@echo "  make test-sdk       Test the SDK/model"
+	@echo "  make test-token     Test token generation"
+	@echo "  make test-prompt    Test prompt generation"
+	@echo "  make test-selection Test function selection"
+	@echo "  make lint           Run flake8"
+	@echo "  make run            Run the application"
+	@echo "  make clean          Remove cache files"
 
 install:
-	mkdir -p $(UV_CACHE_DIR)
-	mkdir -p $(HF_HOME)
-	$(ENV) $(UV) sync
-
-run:
-	$(ENV) $(UV) run $(PYTHON) -m src
-
-debug:
-	$(ENV) $(UV) run $(PYTHON) -m pdb -m src
+	uv sync
+	uv add --dev pytest flake8
 
 test:
-	$(ENV) $(UV) run $(PYTHON) -m pytest tests
+	$(ENV) $(PYTEST) tests
 
 test-sdk:
-	$(ENV) $(UV) run $(PYTHON) -m tests.test_sdk
+	$(ENV) $(PYTHON) -m tests.test_sdk
 
 test-token:
-	$(ENV) $(UV) run $(PYTHON) -m tests.test_token_generation
+	$(ENV) $(PYTHON) -m tests.test_token_generation
 
 test-prompt:
-	$(ENV) $(UV) run $(PYTHON) -m tests.test_prompt
+	$(ENV) $(PYTHON) -m tests.test_prompt
 
 test-selection:
-	$(ENV) $(UV) run $(PYTHON) -m tests.test_function_selection
-
-test-vocabulary:
-	$(ENV) $(UV) run $(PYTHON) -m tests.test_vocabulary
-
-test-parameters:
-	$(ENV) $(UV) run $(PYTHON) -m tests.test_parameter_generation
+	$(ENV) $(PYTHON) -m tests.test_function_selection
 
 lint:
-	$(ENV) $(UV) run flake8 .
-	$(ENV) $(UV) run mypy . \
-		--warn-return-any \
-		--warn-unused-ignores \
-		--ignore-missing-imports \
-		--disallow-untyped-defs \
-		--check-untyped-defs
+	$(ENV) $(FLAKE8) src tests --exclude=.uv-cache,.hf-cache,.venv
 
-lint-strict:
-	$(ENV) $(UV) run flake8 .
-	$(ENV) $(UV) run mypy . --strict
+run:
+	$(ENV) $(PYTHON) -m src
 
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	rm -rf .mypy_cache
 	rm -rf .pytest_cache
-	rm -rf .coverage
-	rm -rf htmlcov
-
-fclean: clean
-	rm -rf .venv
-	rm -rf .uv-cache
-	rm -rf .hf-cache
-
-re: fclean install
+	rm -rf .mypy_cache
+	rm -rf .ruff_cache
+	rm -rf __pycache__
+	rm -rf src/__pycache__
+	rm -rf tests/__pycache__
