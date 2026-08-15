@@ -1,7 +1,7 @@
 import argparse
 import sys
 from pathlib import Path
-from src.loader import load_function_definition, load_prompts
+from src.loader import load_function_definitions, load_prompts
 
 
 DEFAULT_FUNCTION = Path("data/input/functions_definition.json")
@@ -47,7 +47,7 @@ def main() -> int:
 
     try:
         prompts = load_prompts(args.input)
-        functions = load_function_definition(
+        functions = load_function_definitions(
             args.function_definition
         )
     except ValueError as exc:

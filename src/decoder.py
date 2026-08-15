@@ -18,7 +18,8 @@ NUMBER_PREFIX = re.compile(
 )
 
 
-def choose_allowed_token(logits: list[float], allowed_token_ids: set[int]) -> int:
+def choose_allowed_token(
+        logits: list[float], allowed_token_ids: set[int]) -> int:
     """Choose the highest-logit allowed token"""
 
     if not allowed_token_ids:
@@ -44,7 +45,8 @@ def choose_allowed_token(logits: list[float], allowed_token_ids: set[int]) -> in
     return best_token_id
 
 
-def greedy_generate(model: Small_LLM_Model, prompt: str, max_tokens: int = 32) -> str:
+def greedy_generate(
+        model: Small_LLM_Model, prompt: str, max_tokens: int = 32) -> str:
     """Generate tokens without constraints"""
 
     encoded = model.encode(prompt)
@@ -71,7 +73,9 @@ def greedy_generate(model: Small_LLM_Model, prompt: str, max_tokens: int = 32) -
     return model.decode(generated_ids)
 
 
-def encode_function_names(model: Small_LLM_Model, functions: list[FunctionDefinition]) -> dict[str, list[int]]:
+def encode_function_names(
+        model: Small_LLM_Model,
+        functions: list[FunctionDefinition]) -> dict[str, list[int]]:
     """Encode available function names"""
 
     candidates: dict[str, list[int]] = {}
@@ -88,7 +92,8 @@ def encode_function_names(model: Small_LLM_Model, functions: list[FunctionDefini
     return candidates
 
 
-def get_allowed_tokens(candidates: dict[str, list[int]], position: int) -> set[int]:
+def get_allowed_tokens(
+        candidates: dict[str, list[int]], position: int) -> set[int]:
     """Get allowed tokens for function selection"""
 
     allowed: set[int] = set()
@@ -102,7 +107,9 @@ def get_allowed_tokens(candidates: dict[str, list[int]], position: int) -> set[i
     return allowed
 
 
-def filter_candidates(candidates: dict[str, list[int]], position: int, selected_token_id: int) -> dict[str, list[int]]:
+def filter_candidates(
+        candidates: dict[str, list[int]], position: int,
+        selected_token_id: int) -> dict[str, list[int]]:
     """Remove incompatible function candidates"""
 
     remaining: dict[str, list[int]] = {}
@@ -117,7 +124,8 @@ def filter_candidates(candidates: dict[str, list[int]], position: int, selected_
     return remaining
 
 
-def find_completed_candidate(candidates: dict[str, list[int]], generated_length: int) -> str | None:
+def find_completed_candidate(
+        candidates: dict[str, list[int]], generated_length: int) -> str | None:
     """Return a completed function name if one exists"""
 
     for name, token_ids in candidates.items():
@@ -127,7 +135,9 @@ def find_completed_candidate(candidates: dict[str, list[int]], generated_length:
     return None
 
 
-def select_function_name(model: Small_LLM_Model, prompt: str, functions: list[FunctionDefinition]) -> str:
+def select_function_name(
+        model: Small_LLM_Model, prompt: str,
+        functions: list[FunctionDefinition]) -> str:
     """Select a function using constrained decoding"""
 
     if not functions:
@@ -210,7 +220,8 @@ def is_complete_number(value: str) -> bool:
     ) is not None
 
 
-def get_number_allowed_tokens(generated_text: str, number_tokens: dict[int, str]) -> set[int]:
+def get_number_allowed_tokens(
+        generated_text: str, number_tokens: dict[int, str]) -> set[int]:
     """Find tokens that keep the number prefix valid"""
 
     allowed: set[int] = set()
@@ -224,7 +235,9 @@ def get_number_allowed_tokens(generated_text: str, number_tokens: dict[int, str]
     return allowed
 
 
-def generate_number(model: Small_LLM_Model, prompt: str, number_tokens: dict[int, str], max_tokens: int = 8) -> float:
+def generate_number(
+        model: Small_LLM_Model, prompt: str, number_tokens: dict[int, str],
+        max_tokens: int = 8) -> float:
     """Generate one numeric value with constrained decoding
 
         model: Loaded language model.
@@ -293,7 +306,9 @@ def generate_number(model: Small_LLM_Model, prompt: str, number_tokens: dict[int
     )
 
 
-def find_function(functions: list[FunctionDefinition], function_name: str) -> FunctionDefinition:
+def find_function(
+        functions: list[FunctionDefinition],
+        function_name: str) -> FunctionDefinition:
     """Find a function definition by name"""
 
     for function in functions:
@@ -305,7 +320,9 @@ def find_function(functions: list[FunctionDefinition], function_name: str) -> Fu
     )
 
 
-def generate_number_parameters(model: Small_LLM_Model, user_prompt: str, function: FunctionDefinition) -> dict[str, float]:
+def generate_number_parameters(
+        model: Small_LLM_Model, user_prompt: str,
+        function: FunctionDefinition) -> dict[str, float]:
     """Generate all numeric parameters of a function"""
 
     number_tokens = build_number_token_map(

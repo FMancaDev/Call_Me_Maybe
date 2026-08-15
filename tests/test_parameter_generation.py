@@ -1,6 +1,9 @@
 from pathlib import Path
 from llm_sdk.llm_sdk import Small_LLM_Model
-from src.decoder import find_function, generate_number_parameters, select_function_name
+from src.decoder import (
+    find_function, generate_number_parameters,
+    select_function_name,
+)
 from src.loader import load_function_definitions
 from src.prompt import build_function_selection_prompt
 

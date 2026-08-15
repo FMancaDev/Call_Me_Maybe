@@ -42,7 +42,7 @@ test-selection:
 	$(ENV) $(PYTHON) -m tests.test_function_selection
 
 lint:
-	$(ENV) $(FLAKE8) src tests --exclude=.uv-cache,.hf-cache,.venv
+	$(ENV) $(FLAKE8) src tests --exclude=.uv-cache,.hf-cache,.venv,tests/investigate_vocab.py
 
 run:
 	$(ENV) $(PYTHON) -m src

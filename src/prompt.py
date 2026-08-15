@@ -2,7 +2,8 @@ import json
 from src.models import FunctionDefinition
 
 
-def build_function_calling_prompt(user_prompt: str, functions: list[FunctionDefinition]) -> str:
+def build_function_calling_prompt(
+        user_prompt: str, functions: list[FunctionDefinition]) -> str:
     """Build the prompt used for function-call generation
 
        user_promt: Natural-language request from the user
@@ -37,7 +38,8 @@ def build_function_calling_prompt(user_prompt: str, functions: list[FunctionDefi
     return prompt
 
 
-def build_function_selection_prompt(user_prompt: str, functions: list[FunctionDefinition]) -> str:
+def build_function_selection_prompt(
+        user_prompt: str, functions: list[FunctionDefinition]) -> str:
     """Build a prompt for function-name selection"""
 
     descriptions = ""
@@ -62,7 +64,8 @@ def build_function_selection_prompt(user_prompt: str, functions: list[FunctionDe
     return prompt
 
 
-def build_parameter_prompt(user_prompt: str, function: FunctionDefinition) -> str:
+def build_parameter_prompt(
+        user_prompt: str, function: FunctionDefinition) -> str:
     """Build a prompt for parameter extraction"""
 
     parameter_data = {}
@@ -90,7 +93,9 @@ def build_parameter_prompt(user_prompt: str, function: FunctionDefinition) -> st
     return prompt
 
 
-def build_parameter_value_prompt(user_prompt: str, function: FunctionDefinition, parameter_name: str) -> str:
+def build_parameter_value_prompt(
+        user_prompt: str, function: FunctionDefinition,
+        parameter_name: str) -> str:
     """Build a prompt for extracting one parameter value
 
         user_prompt: Original user request.
