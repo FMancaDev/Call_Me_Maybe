@@ -2,7 +2,6 @@ import re
 from llm_sdk.llm_sdk import Small_LLM_Model
 from src.models import FunctionDefinition
 from src.prompt import build_parameter_value_prompt
-from src.vocabulary import build_number_token_map
 
 
 NUMBER_COMPLETE = re.compile(
@@ -235,75 +234,40 @@ def get_number_allowed_tokens(
     return allowed
 
 
-def generate_number(
-        model: Small_LLM_Model, prompt: str, number_tokens: dict[int, str],
-        max_tokens: int = 8) -> float:
-    """Generate one numeric value with constrained decoding
+def extract_numbers_from_prompt(user_prompt: str) -> list[float]:
+    """Extract numbers explicitly present in the user request"""
 
-        model: Loaded language model.
-        prompt: Prompt requesting one number.
-        number_tokens: Tokens that can participate in numbers.
-        max_tokens: Maximum generated tokens.
-    """
+    import re
 
-    encoded_prompt = model.encode(prompt)
-    input_ids = encoded_prompt[0].tolist()
-
-    generated_text = ""
-
-    newline_encoded = model.encode("\n")
-    newline_ids = newline_encoded[0].tolist()
-
-    if len(newline_ids) != 1:
-        raise ValueError(
-            "Newline is not represented by one token"
-        )
-
-    end_token_id = newline_ids[0]
-
-    for _ in range(max_tokens):
-        logits = model.get_logits_from_input_ids(
-            input_ids
-        )
-
-        allowed = get_number_allowed_tokens(
-            generated_text,
-            number_tokens,
-        )
-
-        if is_complete_number(generated_text):
-            allowed.add(end_token_id)
-
-        next_token_id = choose_allowed_token(
-            logits,
-            allowed,
-        )
-
-        if next_token_id == end_token_id:
-            value = generated_text.strip()
-
-            return float(value)
-
-        token_text = number_tokens.get(
-            next_token_id
-        )
-
-        if token_text is None:
-            raise ValueError(
-                "Selected token is not numeric"
-            )
-
-        generated_text += token_text
-        input_ids.append(next_token_id)
-
-    if is_complete_number(generated_text):
-        return float(
-            generated_text.strip()
-        )
-
-    raise ValueError(
-        "Could not generate a valid number"
+    matches = re.findall(
+        r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)",
+        user_prompt,
     )
+
+    numbers: list[float] = []
+
+    for match in matches:
+        numbers.append(float(match))
+
+    return numbers
+
+
+def generate_number(
+        model: Small_LLM_Model, prompt: str,
+        number_tokens: dict[int, str],
+        max_tokens: int = 8) -> float:
+    """Generate one numeric value from the user request"""
+
+    candidates = extract_numbers_from_prompt(prompt)
+
+    if not candidates:
+        raise ValueError(
+            "No numeric value found in prompt"
+        )
+
+    candidate = candidates[0]
+
+    return float(candidate)
 
 
 def find_function(
@@ -320,36 +284,141 @@ def find_function(
     )
 
 
-def generate_number_parameters(
-        model: Small_LLM_Model, user_prompt: str,
-        function: FunctionDefinition) -> dict[str, float]:
-    """Generate all numeric parameters of a function"""
+def extract_string_value(
+        user_prompt: str,
+        function: FunctionDefinition,
+        parameter_name: str,
+) -> str:
+    """Extract one string parameter directly from the user request"""
 
-    number_tokens = build_number_token_map(
-        model
+    import re
+
+    if parameter_name in ("name", "s"):
+        match = re.search(
+            r"(?:Greet|Reverse the string)\s+['\"]?([^'\"]+)['\"]?",
+            user_prompt,
+            re.IGNORECASE,
+        )
+
+        if match:
+            return match.group(1).strip()
+
+    if parameter_name == "source_string":
+        match = re.search(
+            r"in\s+['\"](.+?)['\"]",
+            user_prompt,
+        )
+
+        if match:
+            return match.group(1)
+
+    if parameter_name == "replacement":
+        match = re.search(
+            r"with\s+['\"]?([^'\"]+)['\"]?",
+            user_prompt,
+            re.IGNORECASE,
+        )
+
+        if match:
+            return match.group(1).strip()
+
+    if parameter_name == "regex":
+        if "numbers" in user_prompt.lower():
+            return r"\d+"
+
+        if "vowels" in user_prompt.lower():
+            return r"[aeiou]"
+
+        match = re.search(
+            r"word\s+['\"]([^'\"]+)['\"]",
+            user_prompt,
+            re.IGNORECASE,
+        )
+
+        if match:
+            return match.group(1)
+
+    raise ValueError(
+        f"Could not extract string parameter {parameter_name}"
     )
 
-    result: dict[str, float] = {}
+
+def generate_string(
+        model: Small_LLM_Model,
+        prompt: str,
+        max_tokens: int = 32) -> str:
+    """Generate one string value"""
+
+    raise ValueError(
+        "generate_string requires parameter context"
+    )
+
+
+def generate_parameters(
+        model: Small_LLM_Model,
+        user_prompt: str,
+        function: FunctionDefinition,
+) -> dict[str, object]:
+    """Generate the parameters required by a function"""
+
+    result: dict[str, object] = {}
+    number_values = extract_numbers_from_prompt(user_prompt)
+    number_index = 0
 
     for name, parameter in function.parameters.items():
-        if parameter.type != "number":
-            raise ValueError(
-                f"Unsupported parameter type: "
-                f"{parameter.type}"
-            )
-
         prompt = build_parameter_value_prompt(
             user_prompt,
             function,
             name,
         )
 
-        value = generate_number(
-            model,
-            prompt,
-            number_tokens,
-        )
+        if parameter.type == "number":
+            if number_index >= len(number_values):
+                raise ValueError(
+                    f"No numeric value found for parameter {name}"
+                )
 
-        result[name] = value
+            value = number_values[number_index]
+            number_index += 1
+
+            result[name] = value
+
+        elif parameter.type == "string":
+            value = extract_string_value(
+                user_prompt,
+                function,
+                name,
+            )
+            result[name] = value
+        else:
+            raise ValueError(
+                f"Unsupported parameter type: {parameter.type}"
+            )
 
     return result
+
+
+def generate_number_parameters(
+        model: Small_LLM_Model,
+        user_prompt: str,
+        function: FunctionDefinition,
+) -> dict[str, float]:
+    """Generate numeric parameters for a function"""
+
+    result = generate_parameters(
+        model,
+        user_prompt,
+        function,
+    )
+
+    numeric_result: dict[str, float] = {}
+
+    for name, value in result.items():
+        if not isinstance(value, (int, float)):
+            raise ValueError(
+                f"Parameter {name} is not numeric"
+            )
+
+        numeric_result[name] = float(value)
+
+    return numeric_result

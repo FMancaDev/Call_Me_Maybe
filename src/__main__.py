@@ -5,7 +5,7 @@ from pathlib import Path
 from llm_sdk.llm_sdk import Small_LLM_Model
 from src.decoder import (
     select_function_name,
-    generate_number_parameters,
+    generate_parameters,
 )
 from src.loader import load_function_definitions, load_prompts
 from src.prompt import build_function_selection_prompt
@@ -98,7 +98,7 @@ def main() -> int:
                     f"Function not found: {function_name}"
                 )
 
-            parameters = generate_number_parameters(
+            parameters = generate_parameters(
                 model,
                 prompt.prompt,
                 function,
