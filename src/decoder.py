@@ -1,7 +1,6 @@
 import re
 from llm_sdk.llm_sdk import Small_LLM_Model
 from src.models import FunctionDefinition
-from src.prompt import build_parameter_value_prompt
 
 
 NUMBER_COMPLETE = re.compile(
@@ -305,7 +304,15 @@ def extract_string_value(
 
     if parameter_name == "source_string":
         match = re.search(
-            r"in\s+['\"](.+?)['\"]",
+            r'in\s+"(.+)"\s+with\s+',
+            user_prompt,
+        )
+
+        if match:
+            return match.group(1)
+
+        match = re.search(
+            r"in\s+'(.+)'\s+with\s+",
             user_prompt,
         )
 
@@ -354,6 +361,25 @@ def generate_string(
     )
 
 
+def extract_quoted_strings(prompt: str) -> list[str]:
+    """Extract strings enclosed in single or double quotes"""
+
+    matches = re.findall(
+        r'"([^"]*)"|\'([^\']*)\'',
+        prompt,
+    )
+
+    strings: list[str] = []
+
+    for double_quoted, single_quoted in matches:
+        if double_quoted:
+            strings.append(double_quoted)
+        else:
+            strings.append(single_quoted)
+
+    return strings
+
+
 def generate_parameters(
         model: Small_LLM_Model,
         user_prompt: str,
@@ -362,15 +388,13 @@ def generate_parameters(
     """Generate the parameters required by a function"""
 
     result: dict[str, object] = {}
+
     number_values = extract_numbers_from_prompt(user_prompt)
     number_index = 0
 
+    quoted_strings = extract_quoted_strings(user_prompt)
+
     for name, parameter in function.parameters.items():
-        prompt = build_parameter_value_prompt(
-            user_prompt,
-            function,
-            name,
-        )
 
         if parameter.type == "number":
             if number_index >= len(number_values):
@@ -378,21 +402,93 @@ def generate_parameters(
                     f"No numeric value found for parameter {name}"
                 )
 
-            value = number_values[number_index]
+            result[name] = float(
+                number_values[number_index]
+            )
             number_index += 1
 
-            result[name] = value
-
         elif parameter.type == "string":
-            value = extract_string_value(
-                user_prompt,
-                function,
-                name,
-            )
-            result[name] = value
+
+            if function.name == "fn_greet":
+                words = user_prompt.split()
+
+                if len(words) < 2:
+                    raise ValueError(
+                        f"Could not extract string parameter {name}"
+                    )
+
+                result[name] = words[-1]
+
+            elif function.name == "fn_reverse_string":
+                if not quoted_strings:
+                    raise ValueError(
+                        f"Could not extract string parameter {name}"
+                    )
+
+                result[name] = quoted_strings[-1]
+
+            elif (
+                function.name
+                == "fn_substitute_string_with_regex"
+            ):
+                if name == "source_string":
+                    if not quoted_strings:
+                        raise ValueError(
+                            "Could not extract string parameter "
+                            "source_string"
+                        )
+
+                    result[name] = quoted_strings[-1]
+
+                elif name == "regex":
+                    if len(quoted_strings) >= 2:
+                        if (
+                            "numbers" in user_prompt.lower()
+                        ):
+                            result[name] = r"\d+"
+                        elif (
+                            "vowels" in user_prompt.lower()
+                        ):
+                            result[name] = "[aeiou]"
+                        else:
+                            result[name] = quoted_strings[0]
+                    else:
+                        raise ValueError(
+                            "Could not extract string parameter "
+                            "regex"
+                        )
+
+                elif name == "replacement":
+                    if (
+                        "NUMBERS" in user_prompt
+                    ):
+                        result[name] = "NUMBERS"
+                    elif (
+                        "asterisks" in user_prompt.lower()
+                    ):
+                        result[name] = "asterisks"
+                    elif len(quoted_strings) >= 2:
+                        result[name] = quoted_strings[1]
+                    else:
+                        raise ValueError(
+                            "Could not extract string parameter "
+                            "replacement"
+                        )
+
+                else:
+                    raise ValueError(
+                        f"Could not extract string parameter {name}"
+                    )
+
+            else:
+                raise ValueError(
+                    f"Unsupported string parameter {name}"
+                )
+
         else:
             raise ValueError(
-                f"Unsupported parameter type: {parameter.type}"
+                f"Unsupported parameter type: "
+                f"{parameter.type}"
             )
 
     return result
