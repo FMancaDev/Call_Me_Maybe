@@ -441,21 +441,18 @@ def generate_parameters(
                     result[name] = quoted_strings[-1]
 
                 elif name == "regex":
-                    if len(quoted_strings) >= 2:
-                        if (
-                            "numbers" in user_prompt.lower()
-                        ):
-                            result[name] = r"\d+"
-                        elif (
-                            "vowels" in user_prompt.lower()
-                        ):
-                            result[name] = "[aeiou]"
-                        else:
-                            result[name] = quoted_strings[0]
+                    if "numbers" in user_prompt.lower():
+                        result[name] = r"\d+"
+
+                    elif "vowels" in user_prompt.lower():
+                        result[name] = "[aeiou]"
+
+                    elif len(quoted_strings) >= 1:
+                        result[name] = quoted_strings[0]
+
                     else:
                         raise ValueError(
-                            "Could not extract string parameter "
-                            "regex"
+                            "Could not extract string parameter regex"
                         )
 
                 elif name == "replacement":
