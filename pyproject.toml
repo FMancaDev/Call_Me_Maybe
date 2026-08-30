@@ -19,4 +19,17 @@ package = false
 dev = [
     "flake8>=7.3.0",
     "pytest>=9.1.1",
+    "mypy>=1.0",
+]
+
+[tool.mypy]
+python_version = "3.10"
+explicit_package_bases = true
+ignore_missing_imports = true
+exclude = [
+    "^llm_sdk/",
+    "^moulinette/",
+    "^\\.uv-cache/",
+    "^\\.hf-cache/",
+    "^\\.venv/",
 ]
